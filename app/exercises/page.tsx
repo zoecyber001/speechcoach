@@ -1,4 +1,7 @@
 import { BookOpen, Wind, Clock, MessageSquare, CheckCircle2 } from 'lucide-react';
+import BreathingExercise from '@/components/exercises/BreathingExercise';
+import TongueTwister from '@/components/exercises/TongueTwister';
+import Metronome from '@/components/exercises/Metronome';
 
 const modules = [
   {
@@ -6,6 +9,7 @@ const modules = [
     title: 'Articulation & Clarity',
     icon: <MessageSquare className="w-6 h-6 text-blue-500" />,
     description: 'Improve the crispness of your consonants and the richness of your vowels.',
+    interactive: <TongueTwister />,
     exercises: [
       {
         title: 'The Pen Drill',
@@ -16,11 +20,6 @@ const modules = [
         title: 'Consonant Pops',
         description: 'Repeat "Puh-Tuh-Kuh, Buh-Duh-Guh" 10 times, focusing on making the sounds as sharp and distinct as possible.',
         duration: '2 mins'
-      },
-      {
-        title: 'Tongue Twisters',
-        description: 'Say "Peter Piper picked a peck of pickled peppers" 5 times fast without tripping over the words.',
-        duration: '3 mins'
       }
     ]
   },
@@ -29,6 +28,7 @@ const modules = [
     title: 'Pacing & Pausing',
     icon: <Clock className="w-6 h-6 text-emerald-500" />,
     description: 'Learn to control your speed and use silence to your advantage.',
+    interactive: <Metronome />,
     exercises: [
       {
         title: 'The 3-Second Rule',
@@ -47,6 +47,7 @@ const modules = [
     title: 'Breath Control',
     icon: <Wind className="w-6 h-6 text-sky-500" />,
     description: 'Support your voice with proper diaphragmatic breathing to project confidence.',
+    interactive: <BreathingExercise />,
     exercises: [
       {
         title: 'Belly Breathing',
@@ -84,8 +85,8 @@ export default function ExercisesPage() {
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-12">
-        <h1 className="text-4xl font-bold text-slate-900 mb-4">Training Modules</h1>
-        <p className="text-lg text-slate-600 max-w-2xl">
+        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Training Modules</h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
           Master the fundamentals of public speaking with these targeted exercises. 
           Practice these daily to build muscle memory and vocal confidence.
         </p>
@@ -93,33 +94,45 @@ export default function ExercisesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {modules.map((mod) => (
-          <div key={mod.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+          <div key={mod.id} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
+                <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
                   {mod.icon}
                 </div>
-                <h2 className="text-2xl font-semibold text-slate-800">{mod.title}</h2>
+                <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">{mod.title}</h2>
               </div>
-              <p className="text-slate-600">{mod.description}</p>
+              <p className="text-slate-600 dark:text-slate-400">{mod.description}</p>
             </div>
             
             <div className="p-6 flex-1 flex flex-col gap-6">
-              {mod.exercises.map((exercise, idx) => (
-                <div key={idx} className="group">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
-                      {exercise.title}
-                    </h3>
-                    <span className="text-xs font-medium px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full whitespace-nowrap">
-                      {exercise.duration}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {exercise.description}
-                  </p>
+              {mod.interactive && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Interactive Tool</h3>
+                  {mod.interactive}
                 </div>
-              ))}
+              )}
+              
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Practice Drills</h3>
+                <div className="flex flex-col gap-6">
+                  {mod.exercises.map((exercise, idx) => (
+                    <div key={idx} className="group">
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="text-lg font-medium text-slate-900 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {exercise.title}
+                        </h4>
+                        <span className="text-xs font-medium px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full whitespace-nowrap">
+                          {exercise.duration}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {exercise.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ))}

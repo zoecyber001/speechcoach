@@ -261,10 +261,10 @@ export default function SpeechCoach() {
     <div className="w-full max-w-4xl mx-auto p-6 flex flex-col items-center min-h-[80vh]">
       
       <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-4">
-          Your Personal <span className="text-indigo-600">Speech Coach</span>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
+          Your Personal <span className="text-indigo-600 dark:text-indigo-400">Speech Coach</span>
         </h1>
-        <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
           Record yourself speaking, presenting, or answering interview questions. 
           Get instant, AI-powered feedback on your clarity, pacing, and filler words.
         </p>
@@ -277,21 +277,21 @@ export default function SpeechCoach() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="flex flex-col items-center justify-center w-full max-w-xl p-8 bg-white rounded-3xl shadow-xl border border-slate-100"
+            className="flex flex-col items-center justify-center w-full max-w-xl p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800"
           >
             <div className="relative flex items-center justify-center mb-8">
               {isRecording && (
                 <motion.div 
                   animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
                   transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                  className="absolute w-40 h-40 bg-red-100 rounded-full"
+                  className="absolute w-40 h-40 bg-red-100 dark:bg-red-900/30 rounded-full"
                 />
               )}
               {isRecording && (
                 <motion.div 
                   animate={{ scale: [1, 1.1, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                  className="absolute w-32 h-32 bg-red-200 rounded-full"
+                  className="absolute w-32 h-32 bg-red-200 dark:bg-red-800/40 rounded-full"
                 />
               )}
               
@@ -308,10 +308,10 @@ export default function SpeechCoach() {
             </div>
 
             <div className="text-center w-full">
-              <div className={`text-3xl font-mono mb-2 ${isRecording ? 'text-red-500 font-semibold' : 'text-slate-700'}`}>
+              <div className={`text-3xl font-mono mb-2 ${isRecording ? 'text-red-500 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}>
                 {formatTime(recordingDuration)}
               </div>
-              <p className="text-slate-500 font-medium mb-6">
+              <p className="text-slate-500 dark:text-slate-400 font-medium mb-6">
                 {isRecording ? 'Recording in progress...' : 'Tap to start recording'}
               </p>
               
@@ -324,7 +324,7 @@ export default function SpeechCoach() {
                     exit={{ opacity: 0, height: 0 }}
                     className="w-full flex flex-col items-center gap-4 overflow-hidden"
                   >
-                    <div className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center">
+                    <div className="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 flex flex-col items-center">
                       <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2 w-full">
                         <Activity className="w-4 h-4" />
                         <span>Audio Signal</span>
@@ -337,17 +337,17 @@ export default function SpeechCoach() {
                       />
                     </div>
 
-                    <div className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-100 text-left min-h-[120px] max-h-[200px] overflow-y-auto">
+                    <div className="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 text-left min-h-[120px] max-h-[200px] overflow-y-auto">
                       <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                         <span>Live Transcript</span>
                       </div>
-                      <div className="text-slate-700 text-sm leading-relaxed">
+                      <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
                         {liveTranscript.map((t, i) => (
                           <span key={i}>{highlightFillerWords(t.text)} </span>
                         ))}
                         <span className="opacity-70">{highlightFillerWords(interimTranscript)}</span>
                         {!liveTranscript.length && !interimTranscript && (
-                          <span className="text-slate-400 italic">Listening for speech...</span>
+                          <span className="text-slate-400 dark:text-slate-500 italic">Listening for speech...</span>
                         )}
                       </div>
                     </div>
@@ -357,7 +357,7 @@ export default function SpeechCoach() {
             </div>
 
             {error && (
-              <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 w-full">
+              <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl flex items-start gap-3 w-full">
                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                 <p className="text-sm">{error}</p>
               </div>
@@ -371,17 +371,17 @@ export default function SpeechCoach() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex flex-col items-center justify-center w-full max-w-md p-12 bg-white rounded-3xl shadow-xl border border-slate-100"
+            className="flex flex-col items-center justify-center w-full max-w-md p-12 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800"
           >
             <motion.div 
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-              className="mb-6 text-indigo-600"
+              className="mb-6 text-indigo-600 dark:text-indigo-400"
             >
               <Loader2 className="w-12 h-12" />
             </motion.div>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">Analyzing your speech</h3>
-            <p className="text-slate-500 text-center">
+            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Analyzing your speech</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-center">
               Our AI coach is reviewing your pronunciation, pacing, and filler words...
             </p>
           </motion.div>
@@ -394,9 +394,9 @@ export default function SpeechCoach() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full flex flex-col gap-6"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-4 w-full sm:w-auto">
-                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 shrink-0">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                   <Volume2 className="w-6 h-6" />
                 </div>
                 {audioUrl && (
@@ -405,20 +405,20 @@ export default function SpeechCoach() {
               </div>
               <button 
                 onClick={reset}
-                className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors w-full sm:w-auto justify-center"
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors w-full sm:w-auto justify-center"
               >
                 <RefreshCw className="w-4 h-4" />
                 Record Again
               </button>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-              <div className="bg-indigo-600 px-8 py-6 text-white">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="bg-indigo-600 dark:bg-indigo-700 px-8 py-6 text-white">
                 <h2 className="text-2xl font-bold">Coach&apos;s Feedback</h2>
                 <p className="text-indigo-100 mt-1">Here is a detailed breakdown of your performance.</p>
               </div>
               
-              <div className="p-8 prose prose-slate prose-headings:text-slate-800 prose-headings:font-semibold prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4 prose-p:text-slate-600 prose-li:text-slate-600 max-w-none">
+              <div className="p-8 prose prose-slate dark:prose-invert prose-headings:text-slate-800 dark:prose-headings:text-slate-100 prose-headings:font-semibold prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4 prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-li:text-slate-600 dark:prose-li:text-slate-300 max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {feedback}
                 </ReactMarkdown>
