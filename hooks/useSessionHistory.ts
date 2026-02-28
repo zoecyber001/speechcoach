@@ -1,25 +1,19 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { db } from '@/lib/db';
+import { getSessions, saveSession as dbSave, deleteSession as dbDelete } from '@/lib/db';
 import type { CoachingSession, CoachFeedback, SpeechIntent } from '@/lib/types';
 
 interface UseSessionHistoryReturn {
     sessions: CoachingSession[];
     isLoading: boolean;
     loadSessions: () => Promise<void>;
-    saveSession: (args: {
-        intent: SpeechIntent;
-        feedback: CoachFeedback;
-        audioDatUrl?: string;
-    }) => Promise<CoachingSession>;
-    deleteSession: (id: number) => Promise<void>;
+    saveSession: (args: { intent: SpeechIntent; feedback: CoachFeedback }) => Promise<CoachingSession>;
+    deleteSession: (id: string) => Promise<void>;
 }
 
-/**
- * CRUD interface over Dexie/IndexedDB for coaching sessions.
- * Data stays fully client-local — no server storage required.
- */
+// simple CRUD for coaching sessions stored in Supabase
+// everything is isolated by a device_id in localStorage
 export function useSessionHistory(): UseSessionHistoryReturn {
     const [sessions, setSessions] = useState<CoachingSession[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +21,7 @@ export function useSessionHistory(): UseSessionHistoryReturn {
     const loadSessions = useCallback(async () => {
         setIsLoading(true);
         try {
-            const all = await db.sessions.orderBy('createdAt').reverse().toArray();
+            const all = await getSessions();
             setSessions(all);
         } finally {
             setIsLoading(false);
@@ -35,31 +29,16 @@ export function useSessionHistory(): UseSessionHistoryReturn {
     }, []);
 
     const saveSession = useCallback(
-        async ({
-            intent,
-            feedback,
-            audioDatUrl,
-        }: {
-            intent: SpeechIntent;
-            feedback: CoachFeedback;
-            audioDatUrl?: string;
-        }): Promise<CoachingSession> => {
-            const session: CoachingSession = {
-                createdAt: new Date(),
-                intent,
-                feedback,
-                audioDatUrl,
-            };
-            const id = await db.sessions.add(session);
-            const saved = { ...session, id: id as number };
+        async ({ intent, feedback }: { intent: SpeechIntent; feedback: CoachFeedback }): Promise<CoachingSession> => {
+            const saved = await dbSave({ intent, feedback });
             setSessions((prev) => [saved, ...prev]);
             return saved;
         },
         []
     );
 
-    const deleteSession = useCallback(async (id: number) => {
-        await db.sessions.delete(id);
+    const deleteSession = useCallback(async (id: string) => {
+        await dbDelete(id);
         setSessions((prev) => prev.filter((s) => s.id !== id));
     }, []);
 

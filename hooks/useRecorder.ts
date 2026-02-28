@@ -11,12 +11,8 @@ interface UseRecorderReturn {
     stopRecording: () => void;
 }
 
-/**
- * Encapsulates the full MediaRecorder lifecycle.
- * Returns the final audio blob + object URL once recording stops.
- * The caller receives the live MediaStream from startRecording() so
- * sibling hooks (visualizer, transcription) can attach their own nodes.
- */
+// handles the mic recording lifecycle and spits out a blob + URL when done
+// returns the live stream so the visualizer and transcription hooks can tap into it
 export function useRecorder(): UseRecorderReturn {
     const [isRecording, setIsRecording] = useState(false);
     const [duration, setDuration] = useState(0);
@@ -30,7 +26,7 @@ export function useRecorder(): UseRecorderReturn {
 
     const startRecording = useCallback(async (): Promise<MediaStream | null> => {
         try {
-            // Reset state from any previous session
+            // clear out any leftover state from last time
             setAudioBlob(null);
             setAudioDatUrl(null);
             setDuration(0);

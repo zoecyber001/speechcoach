@@ -8,11 +8,8 @@ interface UseAudioVisualizerReturn {
     stopVisualizer: () => void;
 }
 
-/**
- * Encapsulates the Web Audio API frequency visualizer.
- * Attach this to a <canvas ref={canvasRef} /> in the UI.
- * Draws a bar-chart of frequency buckets using requestAnimationFrame.
- */
+// hooks into Web Audio API to draw a frequency bar chart on a canvas
+// just pass a stream and point canvasRef at your <canvas> element
 export function useAudioVisualizer(): UseAudioVisualizerReturn {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -20,8 +17,8 @@ export function useAudioVisualizer(): UseAudioVisualizerReturn {
     const animationFrameRef = useRef<number | null>(null);
 
     const startVisualizer = useCallback((stream: MediaStream) => {
-        // Slight delay ensures the canvas has mounted in the DOM
-        setTimeout(() => {
+        // longer delay so the canvas is definitely rendered in the DOM
+        const tryStart = () => {
             if (!canvasRef.current) return;
 
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -55,7 +52,7 @@ export function useAudioVisualizer(): UseAudioVisualizerReturn {
 
                 for (let i = 0; i < bufferLength; i++) {
                     const barHeight = dataArray[i] / 2;
-                    // Indigo-spectrum gradient: intensity driven by frequency magnitude
+                    // shift color based on frequency magnitude for a nice gradient feel
                     ctx.fillStyle = `rgb(${barHeight + 80}, 80, ${220 - barHeight})`;
                     ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
                     x += barWidth + 1;
@@ -63,7 +60,16 @@ export function useAudioVisualizer(): UseAudioVisualizerReturn {
             };
 
             draw();
-        }, 100);
+        };
+
+        // try after 300ms, retry once at 600ms if canvas still not mounted
+        setTimeout(() => {
+            if (canvasRef.current) {
+                tryStart();
+            } else {
+                setTimeout(tryStart, 300);
+            }
+        }, 300);
     }, []);
 
     const stopVisualizer = useCallback(() => {

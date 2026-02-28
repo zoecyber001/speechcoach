@@ -49,7 +49,7 @@ function SessionCard({
     onRestore,
 }: {
     session: CoachingSession;
-    onDelete: (id: number) => void;
+    onDelete: (id: string) => void;
     onRestore: (session: CoachingSession) => void;
 }) {
     const { label, color } = INTENT_CONFIG[session.intent];

@@ -1,36 +1,29 @@
-// Shared domain types for the AI Speech Coach
+// types shared across the speech coach app
 
 export type SpeechIntent = 'persuade' | 'inspire' | 'inform' | 'connect';
 
 export interface CoachDrill {
   module: 'articulation' | 'pacing' | 'breathing' | 'fillers';
   reason: string;
-  /** Gemini-recommended BPM target for the Metronome, if pacing was flagged */
-  bpmTarget?: number;
+  bpmTarget?: number; // recommended BPM for metronome, only set if pacing was flagged
 }
 
 export interface CoachFeedback {
   score: number; // 0–100 overall
   transcription: string;
   breakdown: {
-    /** Vinh Giang — Vocal Mechanics: rate, pitch, pause toolbox */
-    mechanics: string;
-    /** Nick Morgan — Narrative/Intent alignment */
-    story: string;
-    /** Connie Dieken — Presence & connective tissue */
-    presence: string;
+    mechanics: string; // Vinh Giang - vocal mechanics: rate, pitch, pauses
+    story: string; // Nick Morgan - does the narrative match the intent?
+    presence: string; // Connie Dieken - rapport and connective tissue
   };
   fillerWordCount: number;
-  /** Estimated syllables per minute derived from audio duration + word count */
-  pacingBpm: number;
+  pacingBpm: number; // estimated syllables per minute
   drills: CoachDrill[];
 }
 
 export interface CoachingSession {
-  id?: number; // auto-incremented by Dexie
+  id?: string; // UUID from Supabase
   createdAt: Date;
   intent: SpeechIntent;
   feedback: CoachFeedback;
-  /** Raw audio stored as base64 data URL for in-browser playback */
-  audioDatUrl?: string;
 }

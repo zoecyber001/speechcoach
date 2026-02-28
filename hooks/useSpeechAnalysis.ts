@@ -8,14 +8,12 @@ interface UseSpeechAnalysisReturn {
     feedback: CoachFeedback | null;
     analysisError: string | null;
     analyze: (audioBlob: Blob, intent: SpeechIntent) => Promise<CoachFeedback | null>;
+    setFeedback: (fb: CoachFeedback | null) => void;
     clearFeedback: () => void;
 }
 
-/**
- * Manages the async state machine for posting audio to /api/analyze
- * and receiving the structured CoachFeedback JSON.
- * The actual Gemini call lives server-side — this hook is purely a fetch client.
- */
+// posts audio to /api/analyze and gives back structured feedback
+// the actual gemini call happens server-side, this is just the fetch wrapper
 export function useSpeechAnalysis(): UseSpeechAnalysisReturn {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [feedback, setFeedback] = useState<CoachFeedback | null>(null);
@@ -27,7 +25,7 @@ export function useSpeechAnalysis(): UseSpeechAnalysisReturn {
             setAnalysisError(null);
 
             try {
-                // Convert blob → base64 string for JSON transport
+                // blob -> base64 so we can send it as JSON
                 const base64 = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onloadend = () => {
@@ -73,5 +71,5 @@ export function useSpeechAnalysis(): UseSpeechAnalysisReturn {
         setAnalysisError(null);
     }, []);
 
-    return { isAnalyzing, feedback, analysisError, analyze, clearFeedback };
+    return { isAnalyzing, feedback, analysisError, analyze, setFeedback, clearFeedback };
 }

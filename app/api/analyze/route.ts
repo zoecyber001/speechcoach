@@ -1,35 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-// ── Architect's Note ────────────────────────────────────────────────────────
-// The API key lives exclusively here (server-side). Never expose it with
-// NEXT_PUBLIC_ prefix. The client posts raw audio + intent; only the JSON
-// CoachFeedback shape is returned.
-// ────────────────────────────────────────────────────────────────────────────
-
+// keep the key server-side only - client just posts audio and gets back JSON
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const EXPERT_PROMPT = (intent: string) => `
-You are an elite speech coach trained in three expert frameworks. Analyze the provided audio recording and return a structured JSON object — no markdown, no prose outside the JSON.
+You are an elite speech coach trained in three expert frameworks. Analyze the provided audio recording and return a structured JSON object - no markdown, no prose outside the JSON.
 
 The speaker's stated intent was: "${intent.toUpperCase()}"
 
 Apply these three analytical lenses:
 
-1. **VINH GIANG — Vocal Mechanics (breakdown.mechanics)**
+1. **VINH GIANG - Vocal Mechanics (breakdown.mechanics)**
    Analyze the "Vocal Toolbox": 
    - Rate variation (does the speaker speed up / slow down for effect, or stay monotone?)
    - Pitch spikes (is pitch used to signal emphasis on key words?)
    - Strategic pauses (are silences used intentionally, or is the speaker filler-rushing?)
    Estimate the approximate syllable rate in syllables per minute ("pacingBpm").
 
-2. **NICK MORGAN — Narrative & Intent (breakdown.story)**
+2. **NICK MORGAN - Narrative & Intent (breakdown.story)**
    Does the vocal energy match the speaker's stated intent of "${intent}"?
    - A persuasive delivery should have rising energy toward key claims.
    - An inspiring delivery needs rhythmic waves of tension and release.
    - Evaluate whether the speech follows a clear narrative arc or feels like a data dump.
 
-3. **CONNIE DIEKEN — Presence & Rapport (breakdown.presence)**
+3. **CONNIE DIEKEN - Presence & Rapport (breakdown.presence)**
    Does the speaker establish connective tissue in the first ~30 seconds?
    - Do they open by acknowledging the audience/context, or dive straight into content?
    - Is the delivery purposeful or passive?
@@ -70,7 +65,7 @@ export async function POST(request: NextRequest) {
         }
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-05-14',
+            model: 'gemini-2.5-flash',
             contents: [
                 {
                     inlineData: {
@@ -80,13 +75,13 @@ export async function POST(request: NextRequest) {
                 },
                 { text: EXPERT_PROMPT(intent) },
             ],
+            config: {
+                responseMimeType: 'application/json',
+            },
         });
 
         const rawText = response.text?.trim() ?? '';
-
-        // Strip optional markdown fences Gemini may still wrap around JSON
-        const jsonText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-        const feedback = JSON.parse(jsonText);
+        const feedback = JSON.parse(rawText);
 
         return NextResponse.json(feedback);
     } catch (err) {

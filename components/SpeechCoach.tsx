@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Mic, Square, Loader2, Play, RefreshCw, AlertCircle, Volume2,
   Activity, Zap, BookOpen, Users, TrendingUp, Target, Award,
-  ChevronRight, Clock, Wind, MessageSquare, CheckCircle2,
+  ChevronRight, Clock, Wind, MessageSquare, CheckCircle2, Share2, Download,
 } from 'lucide-react';
 
 import { useRecorder } from '@/hooks/useRecorder';
@@ -16,8 +17,10 @@ import { useSessionHistory } from '@/hooks/useSessionHistory';
 import SessionHistory from '@/components/SessionHistory';
 
 import type { SpeechIntent, CoachFeedback, CoachingSession } from '@/lib/types';
+import { getPreviousSession } from '@/lib/db';
+import { shareScoreCard, downloadScoreCard } from '@/lib/scorecard';
 
-// ── Types & Config ─────────────────────────────────────────────────────────
+
 
 type AppStep = 'intent' | 'record' | 'analyzing' | 'feedback';
 
@@ -28,6 +31,7 @@ const INTENT_OPTIONS: {
   icon: React.ReactNode;
   gradient: string;
   border: string;
+  sampleScript: string;
 }[] = [
     {
       value: 'persuade',
@@ -36,6 +40,7 @@ const INTENT_OPTIONS: {
       icon: <TrendingUp className="w-6 h-6" />,
       gradient: 'from-rose-500 to-pink-600',
       border: 'border-rose-200 dark:border-rose-800 hover:border-rose-400 dark:hover:border-rose-600',
+      sampleScript: "I've reviewed the numbers, and if we pivot now, we can capture 30% more market share in Q3. Standing still is our biggest risk.",
     },
     {
       value: 'inspire',
@@ -44,6 +49,7 @@ const INTENT_OPTIONS: {
       icon: <Zap className="w-6 h-6" />,
       gradient: 'from-amber-500 to-orange-600',
       border: 'border-amber-200 dark:border-amber-800 hover:border-amber-400 dark:hover:border-amber-600',
+      sampleScript: "What we're building isn't just a product. It's a new standard. I need everyone to bring their boldest ideas to the table tomorrow.",
     },
     {
       value: 'inform',
@@ -52,6 +58,7 @@ const INTENT_OPTIONS: {
       icon: <BookOpen className="w-6 h-6" />,
       gradient: 'from-sky-500 to-blue-600',
       border: 'border-sky-200 dark:border-sky-800 hover:border-sky-400 dark:hover:border-sky-600',
+      sampleScript: "Here is the timeline update: Development finishes on the 15th, testing runs through the 25th, and we are aiming for a hard launch on the 30th.",
     },
     {
       value: 'connect',
@@ -60,6 +67,7 @@ const INTENT_OPTIONS: {
       icon: <Users className="w-6 h-6" />,
       gradient: 'from-emerald-500 to-teal-600',
       border: 'border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-600',
+      sampleScript: "Before we dive in, I just wanted to say thank you for the extra hours last week. It really made a difference, and I appreciate your dedication.",
     },
   ];
 
@@ -70,7 +78,7 @@ const DRILL_META: Record<string, { label: string; icon: React.ReactNode; color: 
   fillers: { label: 'Fillers', icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400' },
 };
 
-// ── Sub-components ─────────────────────────────────────────────────────────
+
 
 function ScoreGauge({ score }: { score: number }) {
   const radius = 52;
@@ -116,8 +124,8 @@ function FeedbackTabs({ feedback }: { feedback: CoachFeedback }) {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${activeTab === tab.id
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
           >
             {tab.icon}
@@ -146,12 +154,59 @@ function FeedbackTabs({ feedback }: { feedback: CoachFeedback }) {
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────
+const ANALYZING_MESSAGES = [
+  { heading: 'Analyzing with your expert coaches', sub: 'Giang is listening for pitch. Morgan is mapping your arc. Dieken is checking your presence…' },
+  { heading: 'Measuring vocal dynamics', sub: 'Tracking pace variation, emphasis patterns, and silence usage across your delivery…' },
+  { heading: 'Evaluating intent alignment', sub: 'Checking if your tone and structure match your chosen speaking goal…' },
+  { heading: 'Scanning for filler words', sub: 'Identifying ums, uhs, likes, and other verbal crutches to help you cut them…' },
+  { heading: 'Building your coach report', sub: 'Synthesizing feedback from all three frameworks into actionable insights…' },
+  { heading: 'Almost there', sub: 'Putting the final touches on your personalized recommendations…' },
+];
+
+function AnalyzingSpinner() {
+  const [msgIndex, setMsgIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setMsgIndex((prev) => (prev + 1) % ANALYZING_MESSAGES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const current = ANALYZING_MESSAGES[msgIndex];
+
+  return (
+    <motion.div
+      key="analyzing"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex flex-col items-center justify-center p-16 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800"
+    >
+      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="text-indigo-500 mb-6">
+        <Loader2 className="w-12 h-12" />
+      </motion.div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={msgIndex}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3 }}
+          className="text-center"
+        >
+          <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">{current.heading}</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md">{current.sub}</p>
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
+  );
+}
 
 export default function SpeechCoach() {
   const [step, setStep] = useState<AppStep>('intent');
   const [intent, setIntent] = useState<SpeechIntent | null>(null);
-  const [restoredAudio, setRestoredAudio] = useState<string | null>(null);
+  const [micError, setMicError] = useState<string | null>(null);
 
   const recorder = useRecorder();
   const visualizer = useAudioVisualizer();
@@ -159,8 +214,16 @@ export default function SpeechCoach() {
   const analysis = useSpeechAnalysis();
   const history = useSessionHistory();
 
-  // ── Derived feedback (live session or restored from history) ──
   const activeFeedback = analysis.feedback;
+  const router = useRouter();
+
+  // delta comparison against the previous session
+  const [prevSession, setPrevSession] = useState<CoachingSession | null>(null);
+  useEffect(() => {
+    if (step === 'feedback' && activeFeedback) {
+      getPreviousSession().then(setPrevSession).catch(() => { });
+    }
+  }, [step, activeFeedback]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -169,43 +232,46 @@ export default function SpeechCoach() {
 
   const handleStartRecording = async () => {
     if (!intent) return;
+    setMicError(null);
     transcription.resetTranscript();
     analysis.clearFeedback();
-    setRestoredAudio(null);
 
     const stream = await recorder.startRecording();
     if (!stream) {
-      return; // mic permission denied — useRecorder logs the error
+      setMicError('Mic access denied. Please check your browser permissions.');
+      return;
     }
     visualizer.startVisualizer(stream);
     transcription.startTranscription();
     setStep('record');
   };
 
-  const handleStopRecording = async () => {
+  const handleStopRecording = useCallback(async () => {
     recorder.stopRecording();
     visualizer.stopVisualizer();
     transcription.stopTranscription();
     setStep('analyzing');
 
-    // Wait for MediaRecorder.onstop to fire and populate audioBlob
-    // We poll via setTimeout to keep hooks decoupled
+    // give MediaRecorder.onstop a moment to fire before we try to read the blob
     await new Promise((res) => setTimeout(res, 300));
-  };
+  }, [recorder, visualizer, transcription]);
 
-  // Triggered after audioBlob is ready (via useEffect in parent flow)
+  // kicks off analysis once the blob is available
   const handleAnalyze = useCallback(
-    async (blob: Blob, datUrl: string) => {
+    async (blob: Blob) => {
       const result = await analysis.analyze(blob, intent!);
       if (result) {
-        await history.saveSession({ intent: intent!, feedback: result, audioDatUrl: datUrl });
+        // save in the background - don't block feedback if Supabase is down or misconfigured
+        history.saveSession({ intent: intent!, feedback: result }).catch((err) => {
+          console.warn('Session save failed (will still show feedback):', err);
+        });
       }
       setStep('feedback');
     },
     [intent, analysis, history]
   );
 
-  // Watch for audioBlob availability after stopRecording
+  // detect when the blob becomes available after stopping
   const [analyzedBlob, setAnalyzedBlob] = useState<string | null>(null);
   if (
     step === 'analyzing' &&
@@ -214,30 +280,32 @@ export default function SpeechCoach() {
     recorder.audioDatUrl !== analyzedBlob
   ) {
     setAnalyzedBlob(recorder.audioDatUrl);
-    handleAnalyze(recorder.audioBlob, recorder.audioDatUrl);
+    handleAnalyze(recorder.audioBlob);
+  }
+
+  // Auto-stop at 3 minutes
+  const MAX_RECORDING_SECONDS = 180;
+  if (step === 'record' && recorder.duration >= MAX_RECORDING_SECONDS) {
+    handleStopRecording();
   }
 
   const handleReset = () => {
     analysis.clearFeedback();
     transcription.resetTranscript();
-    setRestoredAudio(null);
     setAnalyzedBlob(null);
+    setMicError(null);
     setStep('intent');
   };
 
   const handleRestoreSession = (session: CoachingSession) => {
     analysis.clearFeedback();
-    // Inject the feedback directly into view — we use a wrapper approach
-    // since useSpeechAnalysis owns its internal state
-    // For session restores, we surface the stored feedback via a dedicated state path
-    setRestoredAudio(session.audioDatUrl ?? null);
-    // Force the feedback step with the stored data
-    (analysis as any)._injectFeedback?.(session.feedback);
+    // Inject the stored feedback
+    analysis.setFeedback(session.feedback);
     setStep('feedback');
   };
 
   const displayFeedback = activeFeedback;
-  const displayAudio = restoredAudio ?? recorder.audioDatUrl;
+  const displayAudio = step === 'feedback' && analyzedBlob === recorder.audioDatUrl ? recorder.audioDatUrl : null;
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col items-center">
@@ -248,7 +316,7 @@ export default function SpeechCoach() {
           Your Personal <span className="text-indigo-600 dark:text-indigo-400">Speech Coach</span>
         </h1>
         <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-          Coached by the frameworks of Giang, Morgan & Dieken — powered by Gemini.
+          Coached by the frameworks of Giang, Morgan & Dieken - powered by Gemini.
         </p>
       </div>
 
@@ -272,8 +340,8 @@ export default function SpeechCoach() {
                   key={opt.value}
                   onClick={() => setIntent(opt.value)}
                   className={`relative p-5 rounded-2xl border-2 bg-white dark:bg-slate-900 flex flex-col items-center gap-3 text-center transition-all duration-200 cursor-pointer ${opt.border} ${intent === opt.value
-                      ? 'shadow-lg scale-105'
-                      : 'shadow-sm hover:shadow-md hover:scale-102'
+                    ? 'shadow-lg scale-105'
+                    : 'shadow-sm hover:shadow-md hover:scale-102'
                     }`}
                 >
                   {intent === opt.value && (
@@ -293,7 +361,7 @@ export default function SpeechCoach() {
               ))}
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-4">
               <button
                 onClick={handleStartRecording}
                 disabled={!intent}
@@ -303,6 +371,13 @@ export default function SpeechCoach() {
                 Start Recording
                 <ChevronRight className="w-5 h-5" />
               </button>
+
+              {micError && (
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium text-sm bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-xl">
+                  <AlertCircle className="w-4 h-4" />
+                  {micError}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -318,9 +393,17 @@ export default function SpeechCoach() {
           >
             {/* Intent badge */}
             {intent && (
-              <span className={`mb-6 text-xs font-semibold px-3 py-1.5 rounded-full bg-gradient-to-r ${INTENT_OPTIONS.find(o => o.value === intent)?.gradient} text-white`}>
-                Intent: {INTENT_OPTIONS.find(o => o.value === intent)?.label}
-              </span>
+              <div className="flex flex-col items-center mb-6 w-full">
+                <span className={`mb-4 inline-flex text-xs font-semibold px-3 py-1.5 rounded-full bg-gradient-to-r ${INTENT_OPTIONS.find(o => o.value === intent)?.gradient} text-white`}>
+                  Intent: {INTENT_OPTIONS.find(o => o.value === intent)?.label}
+                </span>
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 w-full text-center">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Practice Script</p>
+                  <p className="text-slate-800 dark:text-slate-200 font-medium italic">
+                    "{INTENT_OPTIONS.find(o => o.value === intent)?.sampleScript}"
+                  </p>
+                </div>
+              </div>
             )}
 
             {/* Mic button with pulse rings */}
@@ -337,7 +420,7 @@ export default function SpeechCoach() {
               </button>
             </div>
 
-            <div className="text-3xl font-mono text-red-500 font-semibold mb-1">{formatTime(recorder.duration)}</div>
+            <div className="text-3xl font-mono text-red-500 font-semibold mb-1">{formatTime(recorder.duration)} / 03:00</div>
             <p className="text-slate-500 dark:text-slate-400 font-medium mb-6">Recording in progress…</p>
 
             {/* Visualizer */}
@@ -364,22 +447,8 @@ export default function SpeechCoach() {
           </motion.div>
         )}
 
-        {/* ── Step 3: Analyzing ── */}
-        {step === 'analyzing' && (
-          <motion.div
-            key="analyzing"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center p-16 bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800"
-          >
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="text-indigo-500 mb-6">
-              <Loader2 className="w-12 h-12" />
-            </motion.div>
-            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Analyzing with your expert coaches</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center text-sm">Giang is listening for pitch. Morgan is mapping your arc. Dieken is checking your presence…</p>
-          </motion.div>
-        )}
+        {/* Step 3: Analyzing */}
+        {step === 'analyzing' && <AnalyzingSpinner />}
 
         {/* ── Step 4: Feedback ── */}
         {step === 'feedback' && displayFeedback && (
@@ -403,6 +472,22 @@ export default function SpeechCoach() {
               >
                 <RefreshCw className="w-4 h-4" />New Session
               </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => intent && shareScoreCard(displayFeedback, intent)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors text-sm"
+                  title="Share or download your score card"
+                >
+                  <Share2 className="w-4 h-4" />Share
+                </button>
+                <button
+                  onClick={() => intent && downloadScoreCard(displayFeedback, intent)}
+                  className="flex items-center gap-2 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors text-sm"
+                  title="Download as PNG"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Score + quick stats */}
@@ -419,11 +504,25 @@ export default function SpeechCoach() {
                   <div className="grid grid-cols-2 gap-4 flex-1 w-full">
                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
                       <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Filler Words</div>
-                      <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{displayFeedback.fillerWordCount}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{displayFeedback.fillerWordCount}</span>
+                        {prevSession && (() => {
+                          const diff = displayFeedback.fillerWordCount - prevSession.feedback.fillerWordCount;
+                          if (diff === 0) return null;
+                          return <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${diff < 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{diff < 0 ? `↓ ${Math.abs(diff)}` : `↑ +${diff}`}</span>;
+                        })()}
+                      </div>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
-                      <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pace (syl/min)</div>
-                      <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{displayFeedback.pacingBpm}</div>
+                      <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Score</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{displayFeedback.score}</span>
+                        {prevSession && (() => {
+                          const diff = displayFeedback.score - prevSession.feedback.score;
+                          if (diff === 0) return null;
+                          return <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${diff > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{diff > 0 ? `↑ +${diff}` : `↓ ${diff}`}</span>;
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -449,7 +548,7 @@ export default function SpeechCoach() {
                     </h3>
                     <div className="flex flex-col gap-3">
                       {displayFeedback.drills.map((drill, i) => {
-                        const meta = DRILL_META[drill.module];
+                        const meta = DRILL_META[drill.module] ?? { label: drill.module, icon: <Award className="w-4 h-4" />, color: 'text-slate-600 bg-slate-50 dark:bg-slate-800 dark:text-slate-400' };
                         return (
                           <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
                             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg shrink-0 ${meta.color}`}>
@@ -465,6 +564,16 @@ export default function SpeechCoach() {
                         );
                       })}
                     </div>
+
+                    {/* Smart Funnel CTA */}
+                    <button
+                      onClick={() => router.push(`/exercises/${displayFeedback.drills[0].module}`)}
+                      className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98]"
+                    >
+                      <Target className="w-5 h-5" />
+                      Train This Now
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
                   </div>
                 )}
 

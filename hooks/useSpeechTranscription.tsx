@@ -10,6 +10,7 @@ interface TranscriptSegment {
 interface UseSpeechTranscriptionReturn {
     liveTranscript: TranscriptSegment[];
     interimTranscript: string;
+    fillerCount: number;
     startTranscription: () => void;
     stopTranscription: () => void;
     resetTranscript: () => void;
@@ -19,11 +20,8 @@ interface UseSpeechTranscriptionReturn {
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'literally', 'actually', 'right', 'so'];
 const FILLER_REGEX = new RegExp(`\\b(${FILLER_WORDS.join('|')})\\b`, 'gi');
 
-/**
- * Encapsulates the Web Speech API (webkitSpeechRecognition).
- * Provides live + interim transcript segments and a helper to highlight
- * filler words with a yellow badge — reusable in both live view and feedback panels.
- */
+// wraps the browser's SpeechRecognition API for live transcription
+// also has a helper to highlight filler words like "um" and "like"
 export function useSpeechTranscription(): UseSpeechTranscriptionReturn {
     const [liveTranscript, setLiveTranscript] = useState<TranscriptSegment[]>([]);
     const [interimTranscript, setInterimTranscript] = useState('');
@@ -37,6 +35,7 @@ export function useSpeechTranscription(): UseSpeechTranscriptionReturn {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.lang = 'en-US';
 
         recognition.onresult = (event: any) => {
             let interim = '';
@@ -57,6 +56,21 @@ export function useSpeechTranscription(): UseSpeechTranscriptionReturn {
             setInterimTranscript(interim);
         };
 
+        // auto-restart on unexpected end (browsers kill it after silence)
+        recognition.onend = () => {
+            if (recognitionRef.current === recognition) {
+                try { recognition.start(); } catch { /* already running */ }
+            }
+        };
+
+        recognition.onerror = (e: any) => {
+            console.warn('[SpeechRecognition] error:', e.error);
+            // 'no-speech' is normal during silence — don't kill the session
+            if (e.error === 'aborted') {
+                recognitionRef.current = null;
+            }
+        };
+
         recognition.start();
         recognitionRef.current = recognition;
     }, []);
@@ -72,33 +86,41 @@ export function useSpeechTranscription(): UseSpeechTranscriptionReturn {
         setInterimTranscript('');
     }, []);
 
-    /**
-     * Returns JSX with filler words wrapped in a highlighted <span>.
-     * Pure function — can be called from any component receiving this hook's return value.
-     */
+    // wraps filler words in a highlighted span so they stand out
     const highlightFillerWords = useCallback((text: string): React.ReactNode => {
         if (!text) return null;
         const parts = text.split(FILLER_REGEX);
         return parts.map((part, i) =>
             FILLER_WORDS.includes(part.toLowerCase()) ? (
                 <span
-          key= { i }
-          className = "bg-amber-200 text-amber-900 dark:bg-amber-700/40 dark:text-amber-200 px-1 rounded-md font-semibold text-xs"
-            >
-            { part }
-            </span>
-        ) : (
-            <span key= { i } > { part } </span>
-      )
-    );
-}, []);
+                    key={i}
+                    className="bg-amber-200 text-amber-900 dark:bg-amber-700/40 dark:text-amber-200 px-1 rounded-md font-semibold text-xs"
+                >
+                    {part}
+                </span>
+            ) : (
+                <span key={i} > {part} </span>
+            )
+        );
+    }, []);
 
-return {
-    liveTranscript,
-    interimTranscript,
-    startTranscription,
-    stopTranscription,
-    resetTranscript,
-    highlightFillerWords,
-};
+    const countFillersInText = (text: string) => {
+        if (!text) return 0;
+        const matches = text.match(FILLER_REGEX);
+        return matches ? matches.length : 0;
+    };
+
+    const fillerCount =
+        liveTranscript.reduce((acc, seg) => acc + countFillersInText(seg.text), 0) +
+        countFillersInText(interimTranscript);
+
+    return {
+        liveTranscript,
+        interimTranscript,
+        fillerCount,
+        startTranscription,
+        stopTranscription,
+        resetTranscript,
+        highlightFillerWords,
+    };
 }
